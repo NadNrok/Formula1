@@ -7,18 +7,23 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
-
 public class Formula1Application {
+
+	private static final String START_LOG_FILE = "start.txt";
+	private static final String END_LOG_FILE = "end.txt";
+	private static final String ABBREVIATIONS_FILE = "abbreviations.txt";
 
 	public static void main(String[] args) {
 		try {
-			List<String> startLogLines = readLogFile("start.txt");
-			List<String> endLogLines = readLogFile("end.txt");
-			List<String> abbreviations = readLogFile("abbreviations.txt");
+			List<String> startLogLines = readLogFile(START_LOG_FILE);
+			List<String> endLogLines = readLogFile(END_LOG_FILE);
+			List<String> abbreviations = readLogFile(ABBREVIATIONS_FILE);
 
 			List<LapRecord> lapRecords = parseLogData(startLogLines, endLogLines);
 
@@ -35,13 +40,13 @@ public class Formula1Application {
 	}
 
 	private static List<String> readLogFile(String fileName) throws IOException {
-	    try (InputStream inputStream = Formula1Application.class.getClassLoader().getResourceAsStream(fileName);
-	         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+		try (InputStream inputStream = Formula1Application.class.getClassLoader().getResourceAsStream(fileName);
+				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 
-	        return reader.lines().collect(Collectors.toList());
-	    }
+			return reader.lines().collect(Collectors.toList());
+		}
 	}
-	
+
 	private static List<LapRecord> parseLogData(List<String> startLogLines, List<String> endLogLines) {
 		List<LapRecord> lapRecords = new ArrayList<>();
 
@@ -59,7 +64,20 @@ public class Formula1Application {
 	}
 
 	private static String calculateLapTime(String startLine, String endLine) {
-		return endLine.substring(11);
+		LocalTime startTime = parseTime(startLine);
+		LocalTime endTime = parseTime(endLine);
+
+		Duration duration = Duration.between(startTime, endTime);
+		long minutes = duration.toMinutes();
+		long seconds = duration.minusMinutes(minutes).getSeconds();
+		long millis = duration.minusMinutes(minutes).minusSeconds(seconds).toMillis();
+
+		return String.format("%d:%02d.%03d", minutes, seconds, millis);
+	}
+
+	private static LocalTime parseTime(String line) {
+	    String timeString = line.replaceAll("[^0-9:.]", "");
+	    return LocalTime.parse(timeString, DateTimeFormatter.ofPattern("yyyyMMddHH:mm:ss.SSS"));
 	}
 
 	private static void setRacerInfo(List<String> abbreviations, Map<String, LapRecord> racerMap) {
