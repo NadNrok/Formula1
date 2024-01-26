@@ -7,54 +7,15 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
-class LapRecord {
-	private String racerAbbreviation;
-	private String racerName;
-	private String team;
-	private String lapTime;
 
-	public LapRecord(String racerAbbreviation, String lapTime) {
-		this.racerAbbreviation = racerAbbreviation;
-		this.lapTime = lapTime;
-	}
-
-	public String getRacerAbbreviation() {
-		return racerAbbreviation;
-	}
-
-	public String getRacerName() {
-		return racerName;
-	}
-
-	public void setRacerName(String racerName) {
-		this.racerName = racerName;
-	}
-
-	public String getTeam() {
-		return team;
-	}
-
-	public void setTeam(String team) {
-		this.team = team;
-	}
-
-	public String getLapTime() {
-		return lapTime;
-	}
-
-	@Override
-	public String toString() {
-		return racerName + " | " + team + " | " + lapTime;
-	}
-}
 
 public class Formula1Application {
 
 	public static void main(String[] args) {
 		try {
-			List<String> startLogLines = readLogFile("start.txt");
-			List<String> endLogLines = readLogFile("end.txt");
-			List<String> abbreviations = readLogFile("abbreviations.txt");
+			final List<String> startLogLines = readLogFile("start.txt");
+			final List<String> endLogLines = readLogFile("end.txt");
+			final List<String> abbreviations = readLogFile("abbreviations.txt");
 
 			List<LapRecord> lapRecords = parseLogData(startLogLines, endLogLines);
 
