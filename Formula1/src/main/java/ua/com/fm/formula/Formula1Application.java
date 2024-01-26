@@ -64,21 +64,27 @@ public class Formula1Application {
 	}
 
 	private static String calculateLapTime(String startLine, String endLine) {
-		LocalTime startTime = parseTime(startLine);
-		LocalTime endTime = parseTime(endLine);
+	    LocalTime startTime = parseTime(startLine);
+	    LocalTime endTime = parseTime(endLine);
 
-		Duration duration = Duration.between(startTime, endTime);
-		long minutes = duration.toMinutes();
-		long seconds = duration.minusMinutes(minutes).getSeconds();
-		long millis = duration.minusMinutes(minutes).minusSeconds(seconds).toMillis();
+	    Duration duration = Duration.between(startTime, endTime);
+	    long minutes = Math.abs(duration.toMinutes());
+	    long seconds = Math.abs((duration.getSeconds() % 3600) % 60);
+	    long millis = Math.abs(duration.toMillis() % 1000);
 
-		return String.format("%d:%02d.%03d", minutes, seconds, millis);
+	    return String.format("%d:%02d.%03d", minutes, seconds, millis);
 	}
 
 	private static LocalTime parseTime(String line) {
-	    String timeString = line.replaceAll("[^0-9:.]", "");
-	    return LocalTime.parse(timeString, DateTimeFormatter.ofPattern("yyyyMMddHH:mm:ss.SSS"));
+	    int underscoreIndex = line.lastIndexOf('_');
+	    if (underscoreIndex != -1 && underscoreIndex + 1 < line.length()) {
+	        String timeString = line.substring(underscoreIndex + 1);
+	        return LocalTime.parse(timeString, DateTimeFormatter.ofPattern("HH:mm:ss.SSS"));
+	    } else {
+	        throw new IllegalArgumentException("Invalid time format in line: " + line);
+	    }
 	}
+
 
 	private static void setRacerInfo(List<String> abbreviations, Map<String, LapRecord> racerMap) {
 		for (String abbreviationLine : abbreviations) {
