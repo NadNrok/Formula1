@@ -1,6 +1,9 @@
 package ua.com.fm.formula;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -13,9 +16,9 @@ public class Formula1Application {
 
 	public static void main(String[] args) {
 		try {
-			final List<String> startLogLines = readLogFile("start.txt");
-			final List<String> endLogLines = readLogFile("end.txt");
-			final List<String> abbreviations = readLogFile("abbreviations.txt");
+			List<String> startLogLines = readLogFile("start.txt");
+			List<String> endLogLines = readLogFile("end.txt");
+			List<String> abbreviations = readLogFile("abbreviations.txt");
 
 			List<LapRecord> lapRecords = parseLogData(startLogLines, endLogLines);
 
@@ -32,10 +35,13 @@ public class Formula1Application {
 	}
 
 	private static List<String> readLogFile(String fileName) throws IOException {
-		Path filePath = Paths.get(fileName);
-		return Files.readAllLines(filePath);
-	}
+	    try (InputStream inputStream = Formula1Application.class.getClassLoader().getResourceAsStream(fileName);
+	         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 
+	        return reader.lines().collect(Collectors.toList());
+	    }
+	}
+	
 	private static List<LapRecord> parseLogData(List<String> startLogLines, List<String> endLogLines) {
 		List<LapRecord> lapRecords = new ArrayList<>();
 
