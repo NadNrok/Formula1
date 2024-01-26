@@ -4,117 +4,106 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class Formula1Application {
 
-	private static final String START_LOG_FILE = "start.txt";
-	private static final String END_LOG_FILE = "end.txt";
-	private static final String ABBREVIATIONS_FILE = "abbreviations.txt";
+    private static final String START_LOG_FILE = "start.txt";
+    private static final String END_LOG_FILE = "end.txt";
+    private static final String ABBREVIATIONS_FILE = "abbreviations.txt";
 
-	public static void main(String[] args) {
-		try {
-			List<String> startLogLines = readLogFile(START_LOG_FILE);
-			List<String> endLogLines = readLogFile(END_LOG_FILE);
-			List<String> abbreviations = readLogFile(ABBREVIATIONS_FILE);
+    public static void main(String[] args) {
+        try {
+            List<String> startLogLines = readLogFile(START_LOG_FILE);
+            List<String> endLogLines = readLogFile(END_LOG_FILE);
+            List<String> abbreviations = readLogFile(ABBREVIATIONS_FILE);
 
-			List<LapRecord> lapRecords = parseLogData(startLogLines, endLogLines);
+            List<LapRecord> lapRecords = parseLogData(startLogLines, endLogLines);
 
-			Map<String, LapRecord> racerMap = lapRecords.stream()
-					.collect(Collectors.toMap(LapRecord::getRacerAbbreviation, lapRecord -> lapRecord));
+            Map<String, LapRecord> racerMap = lapRecords.stream()
+                    .collect(Collectors.toMap(LapRecord::getRacerAbbreviation, lapRecord -> lapRecord));
 
-			setRacerInfo(abbreviations, racerMap);
+            setRacerInfo(abbreviations, racerMap);
 
-			printTopRacers(lapRecords);
+            printTopRacers(lapRecords);
 
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-	private static List<String> readLogFile(String fileName) throws IOException {
-		try (InputStream inputStream = Formula1Application.class.getClassLoader().getResourceAsStream(fileName);
-				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+    private static List<String> readLogFile(String fileName) throws IOException {
+        try (InputStream inputStream = Formula1Application.class.getClassLoader().getResourceAsStream(fileName);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 
-			return reader.lines().collect(Collectors.toList());
-		}
-	}
+            return reader.lines().collect(Collectors.toList());
+        }
+    }
 
-	private static List<LapRecord> parseLogData(List<String> startLogLines, List<String> endLogLines) {
-		List<LapRecord> lapRecords = new ArrayList<>();
+    private static List<LapRecord> parseLogData(List<String> startLogLines, List<String> endLogLines) {
+        List<LapRecord> lapRecords = new ArrayList<>();
 
-		for (int i = 0; i < startLogLines.size(); i++) {
-			String startLine = startLogLines.get(i);
-			String endLine = endLogLines.get(i);
+        for (int i = 0; i < startLogLines.size(); i++) {
+            String startLine = startLogLines.get(i);
+            String endLine = endLogLines.get(i);
 
-			String racerAbbreviation = startLine.substring(0, 3);
-			String lapTime = calculateLapTime(startLine, endLine);
+            String racerAbbreviation = startLine.substring(0, 3);
+            Duration lapDuration = calculateLapTime(startLine, endLine);
 
-			lapRecords.add(new LapRecord(racerAbbreviation, lapTime));
-		}
+            lapRecords.add(new LapRecord(racerAbbreviation, lapDuration));
+        }
 
-		return lapRecords;
-	}
+        return lapRecords;
+    }
 
-	private static String calculateLapTime(String startLine, String endLine) {
-	    LocalTime startTime = parseTime(startLine);
-	    LocalTime endTime = parseTime(endLine);
+    private static Duration calculateLapTime(String startLine, String endLine) {
+        LocalTime startTime = parseTime(startLine);
+        LocalTime endTime = parseTime(endLine);
 
-	    Duration duration = Duration.between(startTime, endTime);
-	    long minutes = Math.abs(duration.toMinutes());
-	    long seconds = Math.abs((duration.getSeconds() % 3600) % 60);
-	    long millis = Math.abs(duration.toMillis() % 1000);
+        return Duration.between(startTime, endTime).abs();
+    }
 
-	    return String.format("%d:%02d.%03d", minutes, seconds, millis);
-	}
+    private static LocalTime parseTime(String line) {
+        String timeString = line.substring(line.indexOf("_") + 1);
+        return LocalTime.parse(timeString, DateTimeFormatter.ofPattern("HH:mm:ss.SSS"));
+    }
 
-	private static LocalTime parseTime(String line) {
-	    int underscoreIndex = line.lastIndexOf('_');
-	    if (underscoreIndex != -1 && underscoreIndex + 1 < line.length()) {
-	        String timeString = line.substring(underscoreIndex + 1);
-	        return LocalTime.parse(timeString, DateTimeFormatter.ofPattern("HH:mm:ss.SSS"));
-	    } else {
-	        throw new IllegalArgumentException("Invalid time format in line: " + line);
-	    }
-	}
+    private static void setRacerInfo(List<String> abbreviations, Map<String, LapRecord> racerMap) {
+        for (String abbreviationLine : abbreviations) {
+            String[] parts = abbreviationLine.split("_");
+            String racerAbbreviation = parts[0];
+            String racerName = parts[1];
+            String team = parts[2];
 
+            LapRecord lapRecord = racerMap.get(racerAbbreviation);
+            if (lapRecord != null) {
+                lapRecord.setRacerName(racerName);
+                lapRecord.setTeam(team);
+            }
+        }
+    }
 
-	private static void setRacerInfo(List<String> abbreviations, Map<String, LapRecord> racerMap) {
-		for (String abbreviationLine : abbreviations) {
-			String[] parts = abbreviationLine.split("_");
-			String racerAbbreviation = parts[0];
-			String racerName = parts[1];
-			String team = parts[2];
+    private static void printTopRacers(List<LapRecord> lapRecords) {
+        lapRecords.sort(Comparator.comparing(LapRecord::getLapDuration));
 
-			LapRecord lapRecord = racerMap.get(racerAbbreviation);
-			if (lapRecord != null) {
-				lapRecord.setRacerName(racerName);
-				lapRecord.setTeam(team);
-			}
-		}
-	}
+        int topCount = Math.min(15, lapRecords.size());
+        for (int i = 0; i < topCount; i++) {
+            LapRecord lapRecord = lapRecords.get(i);
+            System.out.println((i + 1) + ". " + lapRecord);
+        }
 
-	private static void printTopRacers(List<LapRecord> lapRecords) {
-		lapRecords.sort(Comparator.comparing(LapRecord::getLapTime));
+        System.out.println("------------------------------------------------------------------------");
 
-		int topCount = Math.min(15, lapRecords.size());
-		for (int i = 0; i < topCount; i++) {
-			LapRecord lapRecord = lapRecords.get(i);
-			System.out.println((i + 1) + ". " + lapRecord);
-		}
-
-		System.out.println("------------------------------------------------------------------------");
-
-		for (int i = topCount; i < lapRecords.size(); i++) {
-			LapRecord lapRecord = lapRecords.get(i);
-			System.out.println((i + 1) + ". " + lapRecord);
-		}
-	}
+        for (int i = topCount; i < lapRecords.size(); i++) {
+            LapRecord lapRecord = lapRecords.get(i);
+            System.out.println((i + 1) + ". " + lapRecord);
+        }
+    }
 }
